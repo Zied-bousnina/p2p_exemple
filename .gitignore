@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.*
+venv/
+.venv/
+env/
+
+# Keys and secrets (NEVER commit these)
+*.salt
+*.key
+.p2p_salt
+.p2p_key
+
+# Local data
+/slices/
+/working_dir/
+*.db
+*.sqlite
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

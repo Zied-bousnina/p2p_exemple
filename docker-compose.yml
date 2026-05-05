@@ -1,0 +1,139 @@
+version: '3.9'
+
+# ═══════════════════════════════════════════════════════════════
+#  P2P File Storage — Docker Compose
+#  Services: ZooKeeper + 3 peer nodes (alice, bob, carol)
+#  Start: docker compose up --build
+#  Scale: docker compose up --scale node-carol=2
+# ═══════════════════════════════════════════════════════════════
+
+services:
+
+  # ── ZooKeeper (peer coordination) ───────────────────────────
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: p2p-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: mntr,conf,ruok
+    volumes:
+      - zk_data:/data
+      - zk_log:/datalog
+      - ./zookeeper/zoo.cfg:/conf/zoo.cfg
+    networks:
+      - p2p_net
+    healthcheck:
+      test: ["CMD", "zkServer.sh", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Node Alice ───────────────────────────────────────────────
+  node-alice:
+    build: ./node
+    container_name: p2p-node-alice
+    ports:
+      - "8001:8000"
+    environment:
+      NODE_ID:    alice
+      NODE_HOST:  node-alice
+      NODE_PORT:  "8000"
+      ZK_HOST:    zookeeper:2181
+      STORE_DIR:  /data/slices
+      DB_PATH:    /data/cache.db
+      DATA_DIR:   /data
+      WORK_DIR:   /data/working_dir
+      NODE_URL:   http://node-alice:8000
+      BLOCK_SIZE: "524288"     # 512 KB
+    volumes:
+      - slices_alice:/data/slices
+      - working_alice:/data/working_dir
+      - cache_alice:/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - p2p_net
+    restart: unless-stopped
+
+  # ── Node Bob ─────────────────────────────────────────────────
+  node-bob:
+    build: ./node
+    container_name: p2p-node-bob
+    ports:
+      - "8002:8000"
+    environment:
+      NODE_ID:    bob
+      NODE_HOST:  node-bob
+      NODE_PORT:  "8000"
+      ZK_HOST:    zookeeper:2181
+      STORE_DIR:  /data/slices
+      DB_PATH:    /data/cache.db
+      DATA_DIR:   /data
+      WORK_DIR:   /data/working_dir
+      NODE_URL:   http://node-bob:8000
+      BLOCK_SIZE: "524288"
+    volumes:
+      - slices_bob:/data/slices
+      - working_bob:/data/working_dir
+      - cache_bob:/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - p2p_net
+    restart: unless-stopped
+
+  # ── Node Carol ───────────────────────────────────────────────
+  node-carol:
+    build: ./node
+    container_name: p2p-node-carol
+    ports:
+      - "8003:8000"
+    environment:
+      NODE_ID:    carol
+      NODE_HOST:  node-carol
+      NODE_PORT:  "8000"
+      ZK_HOST:    zookeeper:2181
+      STORE_DIR:  /data/slices
+      DB_PATH:    /data/cache.db
+      DATA_DIR:   /data
+      WORK_DIR:   /data/working_dir
+      NODE_URL:   http://node-carol:8000
+      BLOCK_SIZE: "524288"
+    volumes:
+      - slices_carol:/data/slices
+      - working_carol:/data/working_dir
+      - cache_carol:/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - p2p_net
+    restart: unless-stopped
+
+# ═══════════════════════════════════════════════════════════════
+# VOLUMES — data persists across restarts
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  zk_data:
+  zk_log:
+  slices_alice:
+  working_alice:
+  cache_alice:
+  slices_bob:
+  working_bob:
+  cache_bob:
+  slices_carol:
+  working_carol:
+  cache_carol:
+
+# ═══════════════════════════════════════════════════════════════
+# NETWORK
+# ═══════════════════════════════════════════════════════════════
+networks:
+  p2p_net:
+    driver: bridge

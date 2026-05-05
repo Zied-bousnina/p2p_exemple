@@ -20,36 +20,23 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r node/requirements.txt
+        run: |
+          pip install -r node/requirements.txt
+          pip install pytest  # Ensure pytest is available
 
       - name: Run tests
         run: |
           cd node
+          # We use || true if you want the build to continue even if tests fail
+          # But for a project, it's better to let it fail so you don't push broken code
           pytest tests/ -v --tb=short
-
-      - name: Notify Slack — tests passed
-        if: success()
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {"text": "✅ Tests passed on branch `${{ github.ref_name }}` by *${{ github.actor }}*"}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack — tests failed
-        if: failure()
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {"text": "❌ Tests FAILED on branch `${{ github.ref_name }}` — check Actions tab"}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ── Build and push Docker image ──────────────────────────
   build-and-push:
     name: Build & Push Docker Image
     needs: test
     runs-on: ubuntu-latest
+    # Only push to Docker Hub if we are on the main branch
     if: github.ref == 'refs/heads/main'
 
     steps:
@@ -79,14 +66,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Notify Slack — image pushed
-        if: success()
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {
-              "text": "🐳 New Docker image pushed!\n*Branch:* `main`\n*Commit:* `${{ github.sha }}`\n*By:* ${{ github.actor }}\n*Image:* `${{ secrets.DOCKERHUB_USERNAME }}/p2p-storage-node:latest`"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

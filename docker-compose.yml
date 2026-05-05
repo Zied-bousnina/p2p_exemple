@@ -1,12 +1,5 @@
 version: '3.9'
 
-# ═══════════════════════════════════════════════════════════════
-#  P2P File Storage — Docker Compose
-#  Services: ZooKeeper + 3 peer nodes (alice, bob, carol)
-#  Start: docker compose up --build
-#  Scale: docker compose up --scale node-carol=2
-# ═══════════════════════════════════════════════════════════════
-
 services:
 
   # ── ZooKeeper (peer coordination) ───────────────────────────
@@ -33,7 +26,8 @@ services:
 
   # ── Node Alice ───────────────────────────────────────────────
   node-alice:
-    build: ./node
+    # REPLACE 'zied1441' with your real Docker Hub username
+    image: zied1441/p2p-storage-node:latest
     container_name: p2p-node-alice
     ports:
       - "8001:8000"
@@ -47,7 +41,7 @@ services:
       DATA_DIR:   /data
       WORK_DIR:   /data/working_dir
       NODE_URL:   http://node-alice:8000
-      BLOCK_SIZE: "524288"     # 512 KB
+      BLOCK_SIZE: "524288"
     volumes:
       - slices_alice:/data/slices
       - working_alice:/data/working_dir
@@ -61,7 +55,7 @@ services:
 
   # ── Node Bob ─────────────────────────────────────────────────
   node-bob:
-    build: ./node
+    image: zied1441/p2p-storage-node:latest
     container_name: p2p-node-bob
     ports:
       - "8002:8000"
@@ -89,7 +83,7 @@ services:
 
   # ── Node Carol ───────────────────────────────────────────────
   node-carol:
-    build: ./node
+    image: zied1441/p2p-storage-node:latest
     container_name: p2p-node-carol
     ports:
       - "8003:8000"
@@ -115,9 +109,6 @@ services:
       - p2p_net
     restart: unless-stopped
 
-# ═══════════════════════════════════════════════════════════════
-# VOLUMES — data persists across restarts
-# ═══════════════════════════════════════════════════════════════
 volumes:
   zk_data:
   zk_log:
@@ -131,9 +122,6 @@ volumes:
   working_carol:
   cache_carol:
 
-# ═══════════════════════════════════════════════════════════════
-# NETWORK
-# ═══════════════════════════════════════════════════════════════
 networks:
   p2p_net:
     driver: bridge
